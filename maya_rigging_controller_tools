@@ -1,0 +1,124 @@
+"""
+Author: Keelin Henley
+Website: https://khenley853.wixsite.com/keelin-henley
+About: Code snippet from my rigging toolkit class: automatic placement of curve controllers for rigging in Maya.
+"""
+# Get user input information from UI.
+@property
+def get_control_name(self):
+	return mc.textFieldGrp(self.control_name, q=True, tx=True)
+ 
+@property
+def get_control_type(self):
+	return mc.textFieldGrp(self.control_name, q=True, tx=True)
+ 
+@property
+def get_control_axis(self):
+	return mc.textFieldGrp(self.control_name, q=True, tx=True)
+ 
+@property
+def get_gimbal_control(self):
+	return mc.textFieldGrp(self.control_name, q=True, tx=True)
+
+# -----------------------------------------------------------------
+
+def place_control(self, *args):
+
+# Check if the selection is valid.
+	selected_joint = mc.ls(sl=True, typ='joint')
+ 	if len(selected_joint) != 1:
+  		raise ValueError(">>> Please select a single joint.")
+   	else:
+		for joint in selected_joint:
+  
+# Create an offset group for the controller, set its rotate order attribute to be the same as the joint.
+  			rotate_order = mc.getAttr(joint + '.rotateOrder')
+	 		offset_group = mc.group(em=True, n=self.get_control_name + '_off')
+			mc.setAttr(offset_group + '.rotateOrder', rotate_order)
+   
+# -----------------------------------------------------------------   		
+# Execute the relevant function depending on the desired controller type.
+   		if self.get_control_type == 'Circle':
+   			control = self.circle_control()
+
+        if self.get_control_type == 'Box':
+            control = self.box_control()
+
+        if self.get_control_type == 'Rounded Square':
+            control = self.rounded_square_control()
+
+        if self.get_control_type == 'Star':
+            control = self.star_control()
+			
+# Set the controller's rotate order attribute to be the same as the joint.
+Parent controller under offset group, then match offset group's transforms with the joint.
+        mc.setAttr(control + '.rotateOrder', rotate_order)
+        mc.parent(control, offset_group)
+        mc.matchTransform(offset_group, selected_joint)
+		
+# -----------------------------------------------------------------
+# Create a gimbal control above the main control, if desired.
+        if self.get_gimbal_control:
+            gimbal = mc.duplicate(control, n=self.get_control_name + '_gimbctrl')
+            gimbal_x = mc.getAttr(gimbal + '.scaleX')
+            gimbal_y = mc.getAttr(gimbal + '.scaleY')
+            gimbal_z = mc.getAttr(gimbal + '.scaleZ')
+            mc.parent(gimbal, control)
+            mc.select(gimbal)
+            mc.scale(gimbal_x - 0.5, gimbal_y - 0.5, gimbal_z - 0.5)
+
+# -----------------------------------------------------------------
+
+# Functions to create the various controller types: CIRCLE
+    def circle_control(self):
+
+        if self.get_control_axis == 1:
+            control = mc.circle(nr=(1, 0, 0), n=self.get_control_name + '_ctrl')[0]
+        elif self.get_control_axis == 2:
+            control = mc.circle(nr=(0, 1, 0), n=self.get_control_name + '_ctrl')[0]
+        else:
+            control = mc.circle(nr=(0, 0, 1), n=self.get_control_name + '_ctrl')[0]
+        return control
+
+# ------------------------------------------------- BOX
+    def box_control(self):
+
+        control = mc.curve(d=1, p=[
+                (-1, -1, 1), (1, -1, 1), (1, 1, 1), (1, 1, -1), (-1, 1, -1), (-1, -1, -1),
+                (-1, -1, 1), (-1, 1, 1), (-1, 1, -1), (-1, 1, 1), (1, 1, 1), (1, 1, -1),
+                (1, -1, -1), (-1, -1, -1), (1, -1, -1), (1, -1, 1)
+            ], n=self.get_control_name + '_ctrl')
+        return control
+
+# ------------------------------------------------- ROUNDED SQUARE
+    def rounded_square_control(self):
+
+        if self.get_control_axis == 1:
+            control = mc.circle(nr=(1, 0, 0), n=self.get_control_name + '_ctrl')[0]
+            mc.select(control + '.cv[0]', control + '.cv[2]', control + '.cv[4]', control + '.cv[6]')
+            mc.scale(1, 0.753998, 0.753998)
+        elif self.get_control_axis == 2:
+            control = mc.circle(nr=(0, 1, 0), n=self.get_control_name + '_ctrl')[0]
+            mc.select(control + '.cv[0]', control + '.cv[2]', control + '.cv[4]', control + '.cv[6]')
+            mc.scale(0.753998, 1, 0.753998)
+        else:
+            control = mc.circle(nr=(0, 0, 1), n=self.get_control_name + '_ctrl')[0]
+            mc.select(control + '.cv[0]', control + '.cv[2]', control + '.cv[4]', control + '.cv[6]')
+            mc.scale(0.753998, 0.753998, 1)
+        return control
+
+# -------------------------------------------------- STAR
+    def star_control(self):
+        if self.get_control_axis == 1:
+            control = mc.circle(nr=(1, 0, 0), n=self.get_control_name + '_ctrl')[0]
+            mc.select(control + '.cv[0]', control + '.cv[2]', control + '.cv[4]', control + '.cv[6]')
+            mc.scale(1, 0.0302686, 0.0302686)
+        elif self.get_control_axis == 2:
+            control = mc.circle(nr=(0, 1, 0), n=self.get_control_name + '_ctrl')[0]
+            mc.select(control + '.cv[0]', control + '.cv[2]', control + '.cv[4]', control + '.cv[6]')
+            mc.scale(0.0302686, 1, 0.0302686)
+        else:
+            control = mc.circle(nr=(0, 0, 1), n=self.get_control_name + '_ctrl')[0]
+            mc.select(control + '.cv[0]', control + '.cv[2]', control + '.cv[4]', control + '.cv[6]')
+            mc.scale(0.0302686, 0.0302686, 1)
+        return control
